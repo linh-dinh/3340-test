@@ -1,0 +1,408 @@
+---
+title: "STAT3340 RED WINE DATA - GROUP 35"
+---
+
+## ABSTRACT
+
+Using the red wine data, we built a model that predicts if a certain wine will be of high or low quality based on a number of factors. Quality is rated on a scale of 1 to 10; with 1 to 5 being low quality, and 6 to 10 being high quality. We fit a logistic regression model to a training set from the data and analyze residual plots, as well as multicollinearity and influential observation problems. We then perform variable selection on the regression model and introduce various interaction terms to see if they should be included in the model. Lastly, we test the prediction ability of the best models on the test set. Our final model has a prediction accuracy of 75.6%, and alcohol appears to be the most significant factor affecting quality.
+
+## INTRODUCTION 
+
+In this data analysis, we examine the relationship between the quality of red wine and 11 independent variables in a dataset of 1600 unique observations. We perform logistic regression on the dataset in order to attain a final model that can predict quality based on those factors. We intend on picking out the factors that have the most notable effects on the quality of wine to get a better understanding of the specific variables that are vital in the prediction of whether a wine will be high or low quality. 
+
+## DATA DESCRIPTION
+
+For uniqueness, we first introduced a new data point to the red wine data. To ensure this point would accurately represent a realistic wine, we chose to randomize an existing value for each variable from within the data frame to create our new point.
+
+```{r}
+
+#Read data, and add new point
+
+wine <- read.table(file="winequality-red.csv",header=TRUE,sep=";")
+wine <- rbind(wine, c(8, 0.54, 0.49, 2.1, 0.067, 5, 16, 0.9962, 3.16, 0.92, 11.7, 5))
+
+```
+
+This is the code we used for randomizing.
+
+```{r, eval = F, echo = T}
+
+#Sampling new observation
+
+c(sample(wine$fixed.acidity,1),sample(wine$volatile.acidity,1), sample(wine$citric.acid,1),
+  sample(wine$residual.sugar,1), sample(wine$chlorides,1), sample(wine$free.sulfur.dioxide,1),
+  sample(wine$total.sulfur.dioxide,1), sample(wine$density,1), sample(wine$pH,1), sample(wine$sulphates,1),
+  sample(wine$alcohol,1), sample(wine$quality,1))
+
+```
+
+We constructed histograms for each variable in the data to see their distributions and possible outliers.
+
+```{r, eval = T, echo = F}
+
+#Histograms of the red wine data
+
+par(mfrow=c(3,4))
+hist(wine$fixed.acidity, main="Fixed acidity")
+hist(wine$volatile.acidity, main="Volatile acidity")
+hist(wine$citric.acid, main="Citric acid")
+hist(wine$residual.sugar, main="Residual sugar")
+hist(wine$chlorides, main="Chlorides")
+hist(wine$free.sulfur.dioxide, main="Free sulfur dioxide")
+hist(wine$total.sulfur.dioxide, main="Total sulfur dioxide")
+hist(wine$density, main="Density")
+hist(wine$pH, main="pH")
+hist(wine$sulphates, main="Sulphates")
+hist(wine$alcohol, main="Alcohol")
+hist(wine$quality, main="Quality")
+```
+
+We observed from the histograms that most of the variables were left-skewed and approximately followed a chi-squared distribution, with the exception of density and pH, which appeared to follow approximate normal distributions. Aside from fixed acidity and density, most of the histograms seemed to show outliers as well. We also observed that the data points in chlorides and residual sugar seemed to be very concentrated. Looking at the histogram for quality, it was obvious that this variable is discrete.
+
+Since the original data rated quality on a scale of 1 to 10, we had to convert this column to be a binary variable in order to carry out a logistic regression; a linear regression would not provide a good fit to a response variable of this type.
+
+```{r}
+
+#Convert quality to a binary variable
+
+qual <- c(wine$quality)
+for(i in 1:1600){
+  qual[i]<-ifelse(qual[i]>=6,1,0)
+}
+wine$quality <- qual
+
+```
+
+To visualize the data, we used the pairs plot function. However, we noticed that these plots were difficult to interpret due to the amount of observations in the data frame; because of this, we looked at only the first 100 observations to visualize the data. 
+
+```{r}
+
+#Create pairs plot using only the first 100 obervations
+
+pairs(wine[1:100,])
+
+```
+
+From the pairs plot, we could see evidence of collinearity between the variables density and fixed acidity, fixed acidity and pH, volatile acidity and citric acid, free sulfur dioxide and total sulfur dioxide, and slight correlation between fixed acidity and citric acid. The pairs plot, however, did not validate these assumptions with enough accuracy, so later on we checked for collinearity again using VIF and the pairwise correlation matrix.
+
+## METHODS
+
+```{r}
+
+#Call libraries needed for the model fitting process
+
+library(car)
+library(pscl)
+library(jtools)
+library(ggstance)
+
+```
+
+In order to conduct a cross-validation once we were finished fitting our model, we separated the data into training and test sets. We fit our model on the training set, which was made up of the first 1000 obervations, and tested the prediction accuracy on the test set, which was made up of the last 600 observations.
+
+```{r}
+
+#Create training and test sets from the data
+
+train <- wine[1:1000,]
+test <- wine[1001:1600,]
+
+```
+
+In the interest of constructing an accurate model, we had to make sure the training set consisted of approximately equal proportions of high and low quality wine. To do so, we used a contingency table, and ensured that that was the case below.
+
+```{r}
+
+#check for approximately equal proportions
+
+table(train$quality)
+
+```
+
+As shown above, the proportions in the training set were very close to being equal, so we went ahead with the model fitting.
+
+The first thing we did was fit a logistic regression model to the training set that included all the predictors.
+
+```{r}
+
+#Fit an initial logistic regression model
+
+train.lm <- glm(quality~fixed.acidity+volatile.acidity+citric.acid+residual.sugar+
+               chlorides+free.sulfur.dioxide+total.sulfur.dioxide+density+
+               pH+sulphates+alcohol, data=train, family=binomial(link="logit"))
+summary(train.lm)
+
+```
+
+Looking at the p-values of each coefficient, half of them seemed to be insignificant towards the model.
+
+As a first step in determining whether our model was a good fit for the data, we analyzed the residual plots to see if they fit the assumptions of a logistic regression model.
+
+```{r}
+
+#Plot the residuals
+
+par(mfrow=c(2,2)) #combining 4 plots into a 2x2 matrix
+plot(train.lm)
+
+```
+
+Noting that these residual plots might have been more helpful in determining if a linear regression model is meeting the assumptions, these plots all looked to be fairly regular when it comes to a logistic regression. Because of this, we concluded that no data transformations were needed at this time. Aside from multicollinearity, we noticed that point 653 seemed to lie far away from the rest of the data in most of the plots, so we suspected this might be an outlier. We later looked at this in more detail.
+
+After this initial step, we used this model to check the VIF using the vif() function in r. We chose to take variables that have a VIF greater than 5 to have evidence of collinearity. 
+
+```{r}
+
+#Examine the VIF on the initial model
+
+vif(train.lm)
+
+```
+
+Looking at the results, we saw that fixed acidity and density had VIFs over 5, while the rest of the predictors sat well below 5. This told us that there may have been some form of collinearity between fixed acidity and density. 
+
+Aside from the VIFs, we also looked at the pairwise correlation matrix for evidene of collinearity.
+
+```{r}
+
+#Pairwise correlation matrix
+
+train.wine.x = cbind(train$fixed.acidity, train$volatile.acidity, train$citric.acid,
+               train$residual.sugar, train$chlorides, train$free.sulfur.dioxide, 
+               train$total.sulfur.dioxide, train$density,
+               train$pH, train$sulphates, train$alcohol)
+train.wine.matrix=as.matrix(scale(train.wine.x,center=TRUE,scale=TRUE))
+train.wine.xx=t(train.wine.matrix)%*%train.wine.matrix/(length(train.wine.x[,1])-1)
+print(train.wine.xx)
+
+```
+
+This confirmed what we observed in the pairs plot and the VIF values: a correlation of approximately 0.7 between fixed acidity and pH, fixed acidity and density, and fixed acidity and citric acid. There were also slight correlations between volatile acidity and citric acid, and citric acid and pH, both around 0.5.
+
+We then looked at the diagonal of the hat matrix to check for leverage points.
+
+```{r}
+
+#X matrix and hat matrix diagonal
+
+train.X<-cbind(rep(1,length(train$quality)), train$fixed.acidity, train$volatile.acidity,
+                   train$citric.acid, train$residual.sugar, train$chlorides, train$free.sulfur.dioxide,
+                   train$total.sulfur.dioxide, train$density, train$pH, train$sulphates, train$alcohol)
+train.hii<-diag(train.X%*%solve(t(train.X)%*%train.X)%*%t(train.X))
+
+
+# Identify points of high leverage
+
+train.p<-ncol(train.X) # number of betas in the model (beta0,beta1,beta2)
+train.n<-nrow(train.X) # number of observations
+which(train.hii>2*train.p/train.n)
+
+```
+
+We could see that the point we noticed earlier in the residual plots, point 653, was also in this list of high leverage points.
+
+We then checked the Cook's D value of the observations.
+
+```{r}
+
+#Influence measures
+
+wine.inf = influence.measures(train.lm)
+which(wine.inf[["infmat"]][,15] > 1)
+
+```
+
+All the Cook's D values appeared to be below 1. We decided to consider point 653 only as an influential point, and removed it from the dataset.
+
+```{r}
+
+#Remove outlier 653
+
+train.outliers=train[-653,]
+train.out.lm = glm(quality~fixed.acidity+volatile.acidity
+            +citric.acid+residual.sugar+chlorides
+            +free.sulfur.dioxide+total.sulfur.dioxide+density+pH
+            +sulphates+alcohol, data = train.outliers, family = binomial)
+summary(train.out.lm)
+
+```
+
+We noticed that the AIC for the model went down significantly. Removing point 653 also seemed to have an influence on the estimated coefficient of density.
+
+Next, we carried out backward variable elimination on the new model. 
+
+```{r}
+
+#Backward variable elimination
+
+train.lm.red <- step(train.out.lm,direction="backward",trace=FALSE)
+summary(train.lm.red)
+pR2(train.lm.red)
+
+```
+
+We saw from the lower AIC value and the McFadden's pseudo R-squared in the range (0.2,0.4) that this model was a good fit. To confirm this was a good choice for the model, we then carried out stepwise variable elimination and compared which variables remained in the model.
+
+```{r}
+
+#Stepwise variable elimination
+
+train.lm.red.2 <- step(train.out.lm,direction="both",trace=FALSE)
+summary(train.lm.red.2)
+
+```
+
+Conducting backward and stepwise regression procedures resulted in the same model, so we felt confident enough to pick this as one of the final model choices.
+
+The variable elimination process casted out the variables residual sugar, chlorides, density, and pH. Since density had a potential problem with collinearity, we ran the vif function again, this time on the reduced model.
+
+```{r}
+
+#VIF on reduced model
+
+vif(train.lm.red)
+
+```
+
+Here, we clearly saw that reducing the model solved any problems we would have had with multicolinearity, as all the variables then had VIFs well below 5.
+
+Next, we tried adding interaction terms to the reduced model. We added each pair of interactions between fixed acidity, volatile acidity, and citric acid; and each pair between free sulfur dioxide, total sulfur dioxide, and sulphates. We chose these interaction terms due to the fact that it was likely that there would be some form of interaction between the acidic variables and between the sulfuric variables. After adding the interaction terms, we performed another backward elimination on this model to see which interaction terms, if any, were significant.
+
+```{r}
+
+#Adding interaction terms 
+
+train.int = glm(formula = quality ~ fixed.acidity + volatile.acidity + citric.acid + 
+                free.sulfur.dioxide + total.sulfur.dioxide + 
+                sulphates + alcohol + fixed.acidity:volatile.acidity +
+                volatile.acidity:citric.acid + fixed.acidity:citric.acid +   
+                free.sulfur.dioxide:total.sulfur.dioxide +
+                total.sulfur.dioxide:sulphates + free.sulfur.dioxide:sulphates, 
+                family = binomial, data = train.outliers)
+
+#Backward elimination on model with intercations
+
+train.int.step = step(train.int, direction="backward", trace=FALSE)
+summary(train.int.step)
+pR2(train.int.step)
+
+```
+
+The backward elimination process omitted all the interaction terms except the ones between free sulfur dioxide and total sulfur dioxide; and between free sulfur dioxide and sulphates. The AIC became, again, significantly lower, and the McFadden's pseudo R-squared value went up. This told us to include these two interactions in the model, and we chose this as another final model option.
+
+From the summary of the model, we saw that the p-value of total sulfur dioxide was higher than the standard alpha level of 0.05. Since the stepwise regression function eliminated variables based on AIC, this regressor with a high p-value was left in the model. Because of this, we tried removing the regressor to see if the resulting model would be a good fit.
+
+```{r}
+
+#Removing total sulfur due to high p value 
+
+train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
+                citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
+                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+summary(train.3rd)
+pR2(train.3rd)
+
+```
+
+This model had a slightly higher AIC and a slightly lower McFadden's pseudo R-squared than the previous model, but the AIC remained significantly better than the reduced model without interaction terms. We picked this as the third choice for a final model.
+
+We then checked the VIFs of the two interaction models.
+
+```{r}
+
+#vif for interaction models 
+
+vif(train.int.step)
+vif(train.3rd)
+
+```
+
+In the first interaction model, free sulfur dioxide and both interaction terms had VIF values significantly higher than 5. In the second model, free sulfur dioxide and the interaction between free sulfur dioxide and sulphates had VIF values higher than 5. Both of these were due to inevitable collinearity between the interaction term and the regressor that was included in that term, so this wasn't cause for concern.
+
+There was also one VIF value slightly higher than 5 in each model. We decided not to consider this as multicollinearity.
+
+## RESULTS
+
+As an initial visualization of the three models we chose as options for the "best" model, we plotted each model's variable coefficients along with their 95% confidence intervals. In doing this, we could see how similar or different each of the models were from each other in a clear and easy to interpret manor. This was done using the plot_summs() below.
+
+```{r}
+
+#Plot each model's coefficients
+
+plot_summs(train.lm.red, train.int.step, train.3rd, scale=TRUE)
+
+```
+From this, we saw that there was the most variation in the coefficients of free sulfur dioxide, in terms of the third model. Other than this, all the other coefficients seemed to have little variation between models. While this did not tell us much about which model to chose as the final model, it was interesting in terms of interpreting how similar each of the model choices were.
+
+After completing the model fitting process, we fit the three "best" models we attained in the previous steps onto the data of the testing set, and compared the fitted values to the observed values. We accepted the model if it accurately predicted the quality of wine with a 70% success rate or higher. Since the model could not produce a rounded value, we considered all fitted values at and below 0.5 as 0, and above 0.5 as 1. To easily view the accuracy of the predictions for each model, we included a comparison table. We first carried out the prediction process with the reduced model, containing no interaction terms.
+
+
+```{r}
+
+#Predict no interaction
+
+wine.prob = predict(train.lm.red, test, type = "response")
+wine.pred = rep("0", dim(test)[1])
+wine.pred[wine.prob > .5] = "1"
+table(wine.pred, test$quality)
+mean(wine.pred == test$quality)
+
+```
+
+This model successfully predicted 75.8% of the data, which indicated the prediction ability of this model was good. We then proceeded on to the reduced model with interactions that included total sulfur dioxide.
+
+```{r}
+
+#Predict with interaction + total.sulfur
+
+wine.prob.int = predict(train.int.step, test, type = "response")
+wine.pred.int = rep("0", dim(test)[1])
+wine.pred.int[wine.prob.int > .5] = "1"
+table(wine.pred.int, test$quality)
+mean(wine.pred.int == test$quality)
+
+```
+
+This model successfully predicted 75.5% of the data. This was only a slightly lower success rate than the first model, however its AIC was significantly better, so we chose this model over the first one. We then moved on to the last model, with interaction terms, and no total sulfur dioxide.
+
+```{r}
+
+#Predict with interaction, no total sulfur
+
+wine.prob.3rd = predict(train.3rd, test, type = "response")
+wine.pred.3rd = rep("0", dim(test)[1])
+wine.pred.3rd[wine.prob.3rd > .5] = "1"
+table(wine.pred.3rd, test$quality)
+mean(wine.pred.3rd == test$quality)
+
+```
+
+This model successfully predicted 75.6% of the data. Since the prediction ability of this model was better than the second one, and its AIC was only slightly higher, we picked this model as the final "best" model.
+
+To ensure that this model was in fact ideal, we fit the same model, this time on the full red wine data set.
+
+```{r}
+
+#Fit the "best" model on full data set
+
+wine.lm = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
+                citric.acid + free.sulfur.dioxide + sulphates + alcohol +
+                free.sulfur.dioxide:total.sulfur.dioxide + 
+                free.sulfur.dioxide:sulphates,family = binomial, data = wine)
+summary(wine.lm)
+
+```
+After fitting this model we compared the coefficients of the intercept and each of the predictors between the model fitted on the training set and the model fitted on the full data set to ensure they were all close in values. Easily, through observation, we saw that this was in fact the case, so we continued to accept the third model we fitted as the "best" model.
+
+## CONCLUSION 
+
+The aim of this data analysis was to build a model that would predict if a red wine is of high or low quality based on a number of quantitative measurements. After thorough examination, we concluded that we are able to predict the quality of a red wine using the values of fixed acidity, volatile acidity, citric acid, free sulfur dioxide, sulphates, and alcohol. It is clear by inspecting the p-values of each predictor, that alcohol content has the largest effect on whether a red wine will be of high or low quality. Using the final model, the quality of red wine can be predicted with an accuracy level of 75.6% on the testing data, so we conclude that this model will be sufficient in predicting the quality of red wine from new observed data.
+
+## APPENDIX 
+
+Here is the full code we used for this data analysis.
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
+
+The dataset we used for this data analysis can be found at: https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/, in the file "winequality-red.csv".
