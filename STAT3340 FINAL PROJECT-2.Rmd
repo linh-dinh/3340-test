@@ -303,7 +303,7 @@ From the summary of the model, we saw that the p-value of total sulfur dioxide w
 
 train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
                 citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
-                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+                free.sulfur.dioxide:sulphates,family = binomial, data = train.outliers)
 summary(train.3rd)
 pR2(train.3rd)
 

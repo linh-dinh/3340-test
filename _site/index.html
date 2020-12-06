@@ -696,8 +696,8 @@ summary(train.int.step)</code></pre>
 <pre class="r"><code>#Removing total sulfur due to high p value 
 
 train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
-                citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
-                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+                citric.acid + free.sulfur.dioxide + sulphates + alcohol + free.sulfur.dioxide:total.sulfur.dioxide + 
+                free.sulfur.dioxide:sulphates, family = binomial, data = train.outliers)
 summary(train.3rd)</code></pre>
 <pre><code>## 
 ## Call:
@@ -800,7 +800,8 @@ plot_summs(train.lm.red, train.int.step, train.3rd, scale=TRUE)</code></pre>
 <pre><code>## Loading required namespace: broom.mixed
 ## Loading required namespace: broom.mixed
 ## Loading required namespace: broom.mixed</code></pre>
-<p><img src="index_files/figure-html/unnamed-chunk-22-1.png" width="672" /> From this, we saw that there was the most variation in the coefficients of free sulfur dioxide, in terms of the third model. Other than this, all the other coefficients seemed to have little variation between models. While this did not tell us much about which model to chose as the final model, it was interesting in terms of interpreting how similar each of the model choices were.</p>
+<p><img src="index_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<p>From this, we saw that there was the most variation in the coefficients of free sulfur dioxide, in terms of the third model. Other than this, all the other coefficients seemed to have little variation between models. While this did not tell us much about which model to chose as the final model, it was interesting in terms of interpreting how similar each of the model choices were.</p>
 <p>After completing the model fitting process, we fit the three “best” models we attained in the previous steps onto the data of the testing set, and compared the fitted values to the observed values. We accepted the model if it accurately predicted the quality of wine with a 70% success rate or higher. Since the model could not produce a rounded value, we considered all fitted values at and below 0.5 as 0, and above 0.5 as 1. To easily view the accuracy of the predictions for each model, we included a comparison table. We first carried out the prediction process with the reduced model, containing no interaction terms.</p>
 <pre class="r"><code>#Predict no interaction
 
@@ -1061,8 +1062,8 @@ pR2(train.int.step)
 #Removing total sulfur due to high p value 
 
 train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
-                citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
-                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+                citric.acid + free.sulfur.dioxide + sulphates + alcohol + free.sulfur.dioxide:total.sulfur.dioxide + 
+                free.sulfur.dioxide:sulphates, family = binomial, data = train.outliers)
 summary(train.3rd)
 pR2(train.3rd)
 

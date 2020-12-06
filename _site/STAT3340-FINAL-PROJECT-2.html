@@ -686,7 +686,7 @@ summary(train.int.step)</code></pre>
 
 train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
                 citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
-                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+                free.sulfur.dioxide:sulphates,family = binomial, data = train.outliers)
 summary(train.3rd)</code></pre>
 <pre><code>## 
 ## Call:
@@ -1041,7 +1041,7 @@ pR2(train.int.step)
 
 train.3rd = glm(formula = quality ~ fixed.acidity + volatile.acidity +  
                 citric.acid + free.sulfur.dioxide + sulphates + alcohol +                 free.sulfur.dioxide:total.sulfur.dioxide + 
-                free.sulfur.dioxide:sulphates,family = binomial, data =                  train.outliers)
+                free.sulfur.dioxide:sulphates,family = binomial, data = train.outliers)
 summary(train.3rd)
 pR2(train.3rd)
 
